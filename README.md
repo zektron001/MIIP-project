@@ -1,5 +1,5 @@
 # MIIP-project
-AI engineering portfolio project — under development
+***AI engineering portfolio project — [under development]***
 
 Building a production-grade multimodal incident triage system
 using LangGraph agents, RAG, HuggingFace models, and a full
