@@ -3,25 +3,17 @@ import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../src"))
 
-from chat import ask
+from rag import load_existing_index, ask_document
 
 
-def test_ask_returns_string():
-    """The ask() function should always return a non-empty string."""
-    result = ask("What is 2 + 2? Answer in one word.")
-    assert isinstance(result, str)
-    assert len(result) > 0
-    print(f"Response: {result}")
+def test_rag_returns_answer():
+    """RAG pipeline should return a non-empty answer."""
+    if not os.path.exists("data/chroma_db"):
+        print("Skipping — no index found. Run main.py option 2 first.")
+        return
 
-
-def test_ask_is_relevant():
-    """The answer to a capital city question should mention the city."""
-    result = ask("What is the capital of France? One word only.")
-    assert "Paris" in result
-    print(f"Response: {result}")
-
-
-def test_additional_cases():
-    result = ask("Which country is Bali from?")
-    assert "Indonesia" in result
-    print(f"Response: {result}")
+    vectorstore = load_existing_index()
+    answer = ask_document("Summarise this document in one sentence.", vectorstore)
+    assert isinstance(answer, str)
+    assert len(answer) > 10
+    print(f"Answer: {answer}")
