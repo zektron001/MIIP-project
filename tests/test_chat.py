@@ -17,3 +17,7 @@ def test_rag_returns_answer():
     assert isinstance(answer, str)
     assert len(answer) > 10
     print(f"Answer: {answer}")
+
+
+if __name__ == "__main__":
+    test_rag_returns_answer()
