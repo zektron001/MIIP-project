@@ -24,8 +24,14 @@ HuggingFace · FastAPI · RAGAS · LangSmith · Docker
 
 ```
 pip install -r requirements.txt
+```
+Install all the dependencies so the program could work
+```
 cp .env.example .env  # add your OPENAI_API_KEY
+```
+Add your .env to put your APIkey always remmber to never ever push your .env in github and always put **.env** in your **.gitignore**
+```
 .venv\Scripts\activate.bat # activate your virtual enviroment
 python src/main.py #To run and execute the program 
-uvicorn api:app --reload --app-dir src #Run the UI
+uvicorn api:app --reload --app-dir src # Run the UI
 ```
