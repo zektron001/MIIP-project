@@ -11,9 +11,6 @@ LLM eval harness.
 2. RAG Use ChromaDB + OpenAIEmbeddings + reranker
 3. RAG Use FAISS + OpenAIEmbeddings + reranker"
 
-**Features**
-
-
 **Progress Timeline**
 - [x] Week 1: OpenAI API + project scaffold
 - [x] Week 2: RAG pipeline with PDF + ChromaDB
