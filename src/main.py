@@ -1,8 +1,10 @@
 import os
 from chat import ask
 from rag import load_and_index_pdf, load_existing_index, ask_document
+from rag import load_and_index_pdf_FAISS, load_existing_faiss_index
 
 CHROMA_PATH = "chroma_db"
+FAISS_PATH = "faiss_index"
 PDF_PATH = "data/document.pdf"
 
 
@@ -54,11 +56,11 @@ def main():
                 print(f"No PDF found at {PDF_PATH}")
                 continue  # ← goes back to menu
 
-            if not os.path.exists(CHROMA_PATH):
-                vectorstore = load_and_index_pdf(PDF_PATH)
+            if not os.path.exists(FAISS_PATH):
+                vectorstore = load_and_index_pdf_FAISS(PDF_PATH)
             else:
                 print("Loading existing index...")
-                vectorstore = load_existing_index()
+                vectorstore = load_existing_faiss_index()
 
             print("\nPDF mode. Type 'back' to go back. Type 'quit' to exit.\n")
             while True:

@@ -1,8 +1,12 @@
 import os
+
+os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
+
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_community.vectorstores import Chroma
+from langchain_community.vectorstores import FAISS
 from dotenv import load_dotenv
 from sentence_transformers import CrossEncoder
 from huggingface_hub.utils import disable_progress_bars
@@ -12,6 +16,7 @@ disable_progress_bars()
 load_dotenv()
 
 CHROMA_PATH = "data/chroma_db"
+FAISS_PATH = "data/faiss_index"
 
 
 def load_and_index_pdf(pdf_path: str):
@@ -30,7 +35,7 @@ def load_and_index_pdf(pdf_path: str):
 
     merged = [Document(page_content=full_text, metadata={"source": pdf_path})]
     splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000, chunk_overlap=200, add_start_index=True
+        chunk_size=2000, chunk_overlap=400, add_start_index=True
     )
     chunks = splitter.split_documents(merged)
 
@@ -56,27 +61,66 @@ def load_existing_index():
     return vectorstore
 
 
-def ask_document(question: str, vectorstore) -> str:
+def load_and_index_pdf_FAISS(pdf_path: str):
+    """Load a PDF, split into chunks, embed and store in FAISS."""
+
+    print("Loading PDF")
+
+    loader = PyPDFLoader(pdf_path)
+    documents = loader.load()
+    print(f"Loaded {len(documents)} pages")
+    full_text = ""
+    page_starts = []  # (char_offset, page_number)
+    for d in documents:
+        page_starts.append((len(full_text), d.metadata.get("page", 0)))
+        full_text += d.page_content + "\n"
+
+    merged = [Document(page_content=full_text, metadata={"source": pdf_path})]
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=2000, chunk_overlap=400, add_start_index=True
+    )
+    chunks = splitter.split_documents(merged)
+
+    # map each chunk back to the page it starts on
+    for c in chunks:
+        off = c.metadata["start_index"]
+        c.metadata["page"] = max(p for s, p in page_starts if s <= off)
+
+    print(f"Split into {len(chunks)} chunks")
+
+    embeddings = OpenAIEmbeddings()
+    vectorstore = FAISS.from_documents(documents=chunks, embedding=embeddings)
+    vectorstore.save_local(FAISS_PATH)
+    print(f"Stored {len(chunks)} chunks in FAISS")
+    return vectorstore
+
+
+def load_existing_faiss_index():
+    embeddings = OpenAIEmbeddings()
+    vectorstore = FAISS.load_local(
+        FAISS_PATH, embeddings, allow_dangerous_deserialization=True
+    )
+    return vectorstore
+
+
+def ask_document(question, vectorstore, llm=None, reranker=None, return_sources=False):
     """Ask a question and get an answer from the document."""
-    llm = ChatOpenAI(model="gpt-4o-mini")
-    reranker = CrossEncoder("Qwen/Qwen3-Reranker-0.6B")
-    # Get relevant chunks
-    retriever = vectorstore.as_retriever(
-        search_kwargs={"k": 20}
-    )  # 1. retrieve 20 chunks
+    if llm is None:
+        llm = ChatOpenAI(model="gpt-4o-mini")
+    if reranker is None:
+        reranker = CrossEncoder("BAAI/bge-reranker-base")
+
+    retriever = vectorstore.as_retriever(search_kwargs={"k": 20})
     docs = retriever.invoke(question)
-    pairs = [(question, d.page_content) for d in docs]  # 3. pair up
-    scores = reranker.predict(pairs)  # 4. RERANK → score the 20
+    pairs = [(question, d.page_content) for d in docs]
+    scores = reranker.predict(pairs)
     ranked = sorted(zip(scores, docs), key=lambda x: x[0], reverse=True)
     docs = [d for _, d in ranked[:3]]
-    # Build context from chunks
     context = "\n".join(doc.page_content for doc in docs)
 
-    # Show source pages
     pages = sorted({doc.metadata["page"] + 1 for doc in docs if "page" in doc.metadata})
     print(f"\n[Sources: pages {pages}]")
 
-    # Ask GPT with context - Augmented Generation (RAG)
     messages = [
         {
             "role": "system",
@@ -84,7 +128,8 @@ def ask_document(question: str, vectorstore) -> str:
         },
         {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {question}"},
     ]
-
-    # generate answer
     response = llm.invoke(messages)
+
+    if return_sources:
+        return {"answer": response.content, "pages": pages}
     return response.content
