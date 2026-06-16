@@ -221,3 +221,4 @@ __marimo__/
 
 # Data-Rag
 data/chroma_db/
+data/faiss_index/
