@@ -9,7 +9,7 @@ LLM eval harness.
 
 1. Normal chat API (OpenAI)
 2. RAG Use ChromaDB + OpenAIEmbeddings + reranker
-3. RAG Use FAISS + OpenAIEmbeddings + reranker"
+3. RAG Use FAISS + OpenAIEmbeddings + reranker
 
 **Progress Timeline**
 - [x] Week 1: OpenAI API + project scaffold
