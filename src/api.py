@@ -12,6 +12,7 @@ backward-compatible tweaks to rag.py (see the message in chat). The heavy models
 every request.
 """
 
+from fastapi.staticfiles import StaticFiles  # with your imports
 from fastapi.responses import Response
 import os
 from contextlib import asynccontextmanager
@@ -81,7 +82,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="MIIP Chatbot", lifespan=lifespan)
-
+app.mount("/static", StaticFiles(directory="static"), name="static")  # near your routes
 # allow a separately-hosted frontend to call this. Tighten allow_origins in production.
 app.add_middleware(
     CORSMiddleware,
